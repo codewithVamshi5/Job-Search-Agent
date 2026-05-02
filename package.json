@@ -1,0 +1,52 @@
+{
+  "name": "career-ops",
+  "version": "1.0.0",
+  "description": "AI-powered job search pipeline built on Claude Code",
+  "scripts": {
+    "doctor": "node doctor.mjs",
+    "verify": "node verify-pipeline.mjs",
+    "normalize": "node normalize-statuses.mjs",
+    "dedup": "node dedup-tracker.mjs",
+    "merge": "node merge-tracker.mjs",
+    "pdf": "node generate-pdf.mjs",
+    "sync-check": "node cv-sync-check.mjs",
+    "update:check": "node update-system.mjs check",
+    "update": "node update-system.mjs apply",
+    "rollback": "node update-system.mjs rollback",
+    "liveness": "node check-liveness.mjs",
+    "scan": "node scan.mjs",
+    "eval": "node eval.mjs",
+    "gemini:eval": "node gemini-eval.mjs",
+    "groq:eval": "node groq-eval.mjs",
+    "claude:eval": "node claude-eval.mjs",
+    "scrape": "node scrape-and-rank.mjs",
+    "scrape:internshala": "node scrape-and-rank.mjs --source internshala",
+    "scrape:naukri": "node scrape-and-rank.mjs --source naukri",
+    "scrape:dry": "node scrape-and-rank.mjs --dry-run",
+    "nvidia": "node nvidia-eval.mjs",
+    "eval:nvidia": "node nvidia-eval.mjs",
+    "eval:groq": "node groq-eval.mjs",
+    "scrape:nvidia": "node scrape-and-rank.mjs --api nvidia",
+    "scrape:groq": "node scrape-and-rank.mjs --api groq"
+  },
+  "keywords": [
+    "ai",
+    "job-search",
+    "claude-code",
+    "career",
+    "automation"
+  ],
+  "author": "Santiago Fernández de Valderrama <hi@santifer.io> (https://santifer.io)",
+  "homepage": "https://santifer.io",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/santifer/career-ops"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "@google/generative-ai": "^0.24.1",
+    "dotenv": "^16.4.5",
+    "js-yaml": "^4.1.1",
+    "playwright": "^1.58.1"
+  }
+}
