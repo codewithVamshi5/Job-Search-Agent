@@ -1,326 +1,178 @@
-# Career-Ops
+career-ops — Automated Internship Finder
+A personal job search pipeline I built to stop manually browsing Internshala and Naukri every day. It scrapes listings automatically, pulls each job description, compares it against my CV using an AI model, and saves a report telling me exactly whether to apply, what I'm missing, and what to fix in my resume for that specific role.
+Built for my own intern search in Hyderabad. Adapted from the open-source career-ops project.
 
-[English](README.md) | [Español](README.es.md) | [Português (Brasil)](README.pt-BR.md) | [한국어](README.ko-KR.md) | [日本語](README.ja.md) | [Русский](README.ru.md) | [简体中文](README.cn.md) | [繁體中文](README.zh-TW.md)
+The Problem It Solves
+Every day I was going to Internshala, clicking through 20-30 listings, reading job descriptions, trying to figure out if I was a good fit, then forgetting which ones I applied to. It was slow and inconsistent. Different roles need different things highlighted in a resume — a "Python Developer Intern" role wants to see your scripting projects front and center, while an "ML Intern" wants TensorFlow and model training experience even if both are in the same resume.
+This tool automates the boring part. It finds the listings, reads them, and tells me specifically: your match score is 8/10, you're missing experience with Docker, add this line about your RAG project to your CV before applying.
 
-<p align="center">
-  <a href="https://x.com/santifer"><img src="docs/hero-banner.jpg" alt="Career-Ops — Multi-Agent Job Search System" width="800"></a>
-</p>
+What It Actually Does
+Internshala / Naukri
+        ↓
+  Headless browser scrapes listings
+        ↓
+  Extracts full job description from each listing page
+        ↓
+  Sends JD + your CV to NVIDIA NIM (Gemma-4-31b)
+        ↓
+  Gets back: grade, matched skills, missing skills, CV tips, interview questions
+        ↓
+  Saves a .md report per job in /reports/
+        ↓
+  Prints ranked table of all results
+It does not auto-apply anywhere. You apply manually. The tool just tells you which ones are worth your time and what to change before you do.
 
-<p align="center">
-  <em>I spent months applying to jobs the hard way. So I engineered the system I wish I had.</em><br>
-  Companies use AI to filter candidates. <strong>I just gave candidates AI to <em>choose</em> companies.</strong><br>
-  <em>Now it's open source.</em>
-</p>
+Stack
+PartToolWhyScrapingPlaywright (headless Chromium)Handles JavaScript-rendered pages that basic fetch can't readAI EvaluationNVIDIA NIM — google/gemma-4-31b-itFree API, 31B parameter model, good qualityFallback AIGroq — llama3-70b-8192Also free, much faster (5 sec vs 2 min), used when NVIDIA is slowRuntimeNode.js (ES Modules)The original career-ops project was in Node, kept it consistentConfigYAML + .envProfile and portal config in YAML, API keys in .env
 
-<p align="center">
-  <img src="https://img.shields.io/badge/Claude_Code-000?style=flat&logo=anthropic&logoColor=white" alt="Claude Code">
-  <img src="https://img.shields.io/badge/OpenCode-111827?style=flat&logo=terminal&logoColor=white" alt="OpenCode">
-  <img src="https://img.shields.io/badge/Gemini_CLI-4285F4?style=flat&logo=google&logoColor=white" alt="Gemini CLI">
-  <img src="https://img.shields.io/badge/Codex_(soon)-6B7280?style=flat&logo=openai&logoColor=white" alt="Codex">
-  <img src="https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white" alt="Node.js">
-  <img src="https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white" alt="Go">
-  <img src="https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white" alt="Playwright">
-  <img src="https://img.shields.io/badge/License-MIT-blue.svg" alt="MIT">
-  <a href="https://discord.gg/8pRpHETxa4"><img src="https://img.shields.io/badge/Discord-5865F2?style=flat&logo=discord&logoColor=white" alt="Discord"></a>
-  <br>
-  <img src="https://img.shields.io/badge/EN-blue?style=flat" alt="EN">
-  <img src="https://img.shields.io/badge/ES-red?style=flat" alt="ES">
-  <img src="https://img.shields.io/badge/DE-grey?style=flat" alt="DE">
-  <img src="https://img.shields.io/badge/FR-blue?style=flat" alt="FR">
-  <img src="https://img.shields.io/badge/PT--BR-green?style=flat" alt="PT-BR">
-  <img src="https://img.shields.io/badge/KO-white?style=flat" alt="KO">
-  <img src="https://img.shields.io/badge/JA-red?style=flat" alt="JA">
-  <img src="https://img.shields.io/badge/ZH--CN-red?style=flat" alt="ZH-CN">
-  <img src="https://img.shields.io/badge/ZH--TW-blue?style=flat" alt="ZH-TW">
-</p>
+Folder Structure
+career-ops-final/
+│
+├── scrape-and-rank.mjs     ← main pipeline (scrape + evaluate + rank)
+├── nvidia-eval.mjs         ← evaluate a single JD using NVIDIA NIM
+├── groq-eval.mjs           ← evaluate a single JD using Groq
+├── eval.mjs                ← smart router (picks best available API)
+├── gemini-eval.mjs         ← also routes to NVIDIA now (key change)
+│
+├── cv.md                   ← your resume in markdown — edit this
+├── config/
+│   └── profile.yml         ← your name, target roles, location, stipend range
+├── .env                    ← API keys (never commit this)
+│
+├── reports/                ← all evaluation reports saved here
+│   ├── SUMMARY-date.md     ← ranked table after each scrape run
+│   └── 001-company-date.md ← individual job report
+│
+├── modes/                  ← evaluation prompt templates
+├── portals.yml             ← job portal config (Internshala, Naukri etc.)
+└── package.json
 
----
+Setup
+Requirements
 
-<p align="center">
-  <img src="docs/demo.gif" alt="Career-Ops Demo" width="800">
-</p>
+Node.js v18 or higher — download from nodejs.org
+A free NVIDIA NIM API key — from build.nvidia.com
+A free Groq API key — from console.groq.com (optional backup)
 
-<p align="center"><strong>740+ job listings evaluated · 100+ personalized CVs · 1 dream role landed</strong></p>
-
-<p align="center"><a href="https://discord.gg/8pRpHETxa4"><img src="https://img.shields.io/badge/Join_the_community-Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white" alt="Discord"></a></p>
-
-## What Is This
-
-Career-Ops turns any AI coding CLI into a full job search command center. Instead of manually tracking applications in a spreadsheet, you get an AI-powered pipeline that:
-
-- **Evaluates offers** with a structured A-F scoring system (10 weighted dimensions)
-- **Generates tailored PDFs** -- ATS-optimized CVs customized per job description
-- **Scans portals** automatically (Greenhouse, Ashby, Lever, company pages)
-- **Processes in batch** -- evaluate 10+ offers in parallel with sub-agents
-- **Tracks everything** in a single source of truth with integrity checks
-
-> **Important: This is NOT a spray-and-pray tool.** Career-ops is a filter -- it helps you find the few offers worth your time out of hundreds. The system strongly recommends against applying to anything scoring below 4.0/5. Your time is valuable, and so is the recruiter's. Always review before submitting.
-
-Career-ops is agentic: Claude Code navigates career pages with Playwright, evaluates fit by reasoning about your CV vs the job description (not keyword matching), and adapts your resume per listing.
-
-> **Heads up: the first evaluations won't be great.** The system doesn't know you yet. Feed it context -- your CV, your career story, your proof points, your preferences, what you're good at, what you want to avoid. The more you nurture it, the better it gets. Think of it as onboarding a new recruiter: the first week they need to learn about you, then they become invaluable.
-
-Built by someone who used it to evaluate 740+ job offers, generate 100+ tailored CVs, and land a Head of Applied AI role. [Read the full case study](https://santifer.io/career-ops-system).
-
-## Features
-
-| Feature | Description |
-|---------|-------------|
-| **Auto-Pipeline** | Paste a URL, get a full evaluation + PDF + tracker entry |
-| **6-Block Evaluation** | Role summary, CV match, level strategy, comp research, personalization, interview prep (STAR+R) |
-| **Interview Story Bank** | Accumulates STAR+Reflection stories across evaluations -- 5-10 master stories that answer any behavioral question |
-| **Negotiation Scripts** | Salary negotiation frameworks, geographic discount pushback, competing offer leverage |
-| **ATS PDF Generation** | Keyword-injected CVs with Space Grotesk + DM Sans design |
-| **Portal Scanner** | 45+ companies pre-configured (Anthropic, OpenAI, ElevenLabs, Retool, n8n...) + custom queries across Ashby, Greenhouse, Lever, Wellfound |
-| **Batch Processing** | Parallel evaluation with `claude -p` workers |
-| **Dashboard TUI** | Terminal UI to browse, filter, and sort your pipeline |
-| **Human-in-the-Loop** | AI evaluates and recommends, you decide and act. The system never submits an application -- you always have the final call |
-| **Pipeline Integrity** | Automated merge, dedup, status normalization, health checks |
-
-## Quick Start
-
-```bash
-# 1. Clone and install
-git clone https://github.com/santifer/career-ops.git
-cd career-ops && npm install
-npx playwright install chromium   # Required for PDF generation
-
-# 2. Check setup
-npm run doctor                     # Validates all prerequisites
-
-# 3. Configure
-cp config/profile.example.yml config/profile.yml  # Edit with your details
-cp templates/portals.example.yml portals.yml       # Customize companies
-
-# 4. Add your CV
-# Create cv.md in the project root with your CV in markdown
-
-# 5. Personalize with Claude
-claude   # Open Claude Code in this directory
-
-# Then ask Claude to adapt the system to you:
-# "Change the archetypes to backend engineering roles"
-# "Translate the modes to English"
-# "Add these 5 companies to portals.yml"
-# "Update my profile with this CV I'm pasting"
-
-# 6. Start using
-# Paste a job URL or run /career-ops
-```
-
-> **The system is designed to be customized by Claude itself.** Modes, archetypes, scoring weights, negotiation scripts -- just ask Claude to change them. It reads the same files it uses, so it knows exactly what to edit.
-
-See [docs/SETUP.md](docs/SETUP.md) for the full setup guide.
-
-## Gemini CLI Integration
-
-Career-ops supports [Gemini CLI](https://github.com/google-gemini/gemini-cli) natively — the same way it supports Claude Code and OpenCode. All 15 slash commands are available, using the same `modes/*.md` evaluation logic.
-
-### Option A — Native Gemini CLI (Recommended)
-
-```bash
-# 1. Install Gemini CLI
-npm install -g @google/gemini-cli
-# or: npx @google/gemini-cli --version
-
-# 2. Authenticate (free — uses your Google account)
-gemini auth
-
-# 3. Run in the career-ops directory
-cd career-ops
-gemini
-
-# 4. Use slash commands just like Claude Code
-/career-ops "Senior AI Engineer at Anthropic..."
-/career-ops-evaluate --file ./jds/openai.txt
-/career-ops-scan
-/career-ops-pdf
-/career-ops-tracker
-```
-
-The `GEMINI.md` file is auto-loaded as context. All 15 commands are defined in `.gemini/commands/*.toml`.
-
-### Option B — Standalone API Script (No CLI install needed)
-
-```bash
-# 1. Get a free API key at https://aistudio.google.com/apikey
-cp .env.example .env
-# Edit .env → set GEMINI_API_KEY=your_key_here
+Installation
+bash# 1. Clone the repo
+git clone https://github.com/YOUR_USERNAME/career-ops-hyderabad.git
+cd career-ops-hyderabad
 
 # 2. Install dependencies
 npm install
 
-# 3. Evaluate a job description
-node gemini-eval.mjs "We are looking for a Senior AI Engineer..."
-node gemini-eval.mjs --file ./jds/my-job.txt
-npm run gemini:eval -- "JD text here"
-```
+# 3. Install the headless browser (one-time, ~150MB download)
+npx playwright install chromium
 
-> **Free tier:** Both options work without billing. Native CLI uses Google OAuth; the API script uses `gemini-2.0-flash` (15 RPM, 1M tokens/day free).
+# 4. Set up your API keys
+cp .env.example .env
+# then open .env and add your keys
+.env file
+envNVIDIA_API_KEY=nvapi-your-key-here
+NVIDIA_MODEL=google/gemma-4-31b-it
+NVIDIA_BASE_URL=https://integrate.api.nvidia.com/v1
 
-## Usage
+GROQ_API_KEY=gsk_your-key-here
+GROQ_MODEL=llama3-70b-8192
+Fill in your details
+Open cv.md and replace the content with your actual resume.
+Open config/profile.yml and update your name, email, target roles, and location.
 
-Career-ops is a single slash command with multiple modes:
+Usage
+Scrape jobs and evaluate all of them
+bash# Scrape Internshala for machine learning roles
+node scrape-and-rank.mjs --source internshala --keyword "machine learning" --api nvidia
 
-```
-/career-ops                → Show all available commands
-/career-ops {paste a JD}   → Full auto-pipeline (evaluate + PDF + tracker)
-/career-ops scan           → Scan portals for new offers
-/career-ops pdf            → Generate ATS-optimized CV
-/career-ops batch          → Batch evaluate multiple offers
-/career-ops tracker        → View application status
-/career-ops apply          → Fill application forms with AI
-/career-ops pipeline       → Process pending URLs
-/career-ops contacto       → LinkedIn outreach message
-/career-ops deep           → Deep company research
-/career-ops training       → Evaluate a course/cert
-/career-ops project        → Evaluate a portfolio project
-```
+# Scrape Naukri for python roles
+node scrape-and-rank.mjs --source naukri --keyword "python developer" --api nvidia
 
-Or just paste a job URL or description directly -- career-ops auto-detects it and runs the full pipeline.
+# Scrape both sites, evaluate top 10 jobs
+node scrape-and-rank.mjs --api nvidia
 
-## How It Works
+# Limit to 5 jobs (faster for testing)
+node scrape-and-rank.mjs --source internshala --keyword "AI intern" --limit 5 --api nvidia
 
-```
-You paste a job URL or description
-        │
-        ▼
-┌──────────────────┐
-│  Archetype       │  Classifies: LLMOps / Agentic / PM / SA / FDE / Transformation
-│  Detection       │
-└────────┬─────────┘
-         │
-┌────────▼─────────┐
-│  A-F Evaluation  │  Match, gaps, comp research, STAR stories
-│  (reads cv.md)   │
-└────────┬─────────┘
-         │
-    ┌────┼────┐
-    ▼    ▼    ▼
- Report  PDF  Tracker
-  .md   .pdf   .tsv
-```
+# Just list what jobs are available without evaluating (no API used)
+node scrape-and-rank.mjs --dry-run
+Evaluate a single job description
+If you find a listing on LinkedIn or somewhere else, copy the full job description text and paste it directly:
+bashnode nvidia-eval.mjs "We are hiring a Machine Learning intern in Hyderabad. 
+Must know Python, TensorFlow, and NLP. 3-month internship with stipend."
 
-## Pre-configured Portals
+# Or read from a text file
+node nvidia-eval.mjs --file ./jds/somejob.txt
+Keywords that work well for Hyderabad intern search
+bash"machine learning"
+"artificial intelligence"
+"deep learning"
+"python developer"
+"data science"
+"nlp"
+"generative ai"
+"full stack"
+"react developer"
+"software developer"
 
-The scanner comes with **45+ companies** ready to scan and **19 search queries** across major job boards. Copy `templates/portals.example.yml` to `portals.yml` and add your own:
+What a Report Looks Like
+Every evaluated job saves a .md file in reports/. Here's the format:
+# Evaluation: Qualcomm — ML Intern
 
-**AI Labs:** Anthropic, OpenAI, Mistral, Cohere, LangChain, Pinecone
-**Voice AI:** ElevenLabs, PolyAI, Parloa, Hume AI, Deepgram, Vapi, Bland AI
-**AI Platforms:** Retool, Airtable, Vercel, Temporal, Glean, Arize AI
-**Contact Center:** Ada, LivePerson, Sierra, Decagon, Talkdesk, Genesys
-**Enterprise:** Salesforce, Twilio, Gong, Dialpad
-**LLMOps:** Langfuse, Weights & Biases, Lindy, Cognigy, Speechmatics
-**Automation:** n8n, Zapier, Make.com
-**European:** Factorial, Attio, Tinybird, Clarity AI, Travelperk
+Date: 2026-04-30 | Grade: A | Score: 9/10 | Verdict: APPLY
 
-**Job boards searched:** Ashby, Greenhouse, Lever, Wellfound, Workable, RemoteFront
+---
 
-## Dashboard TUI
+## MATCH SCORE
+Grade: A
+Score: 9/10
 
-The built-in terminal dashboard lets you browse your pipeline visually:
+## VERDICT
+APPLY — Strong match across all core requirements with additional Agentic AI experience.
 
-```bash
-cd dashboard
-go build -o career-dashboard .
-./career-dashboard --path ..
-```
+## MATCHED SKILLS
+- Python: Expert level, used across all projects
+- TensorFlow: Explicitly listed in skills
+- NLP: Advanced (BERT, Transformers, LangChain)
 
-Features: 6 filter tabs, 4 sort modes, grouped/flat view, lazy-loaded previews, inline status changes.
+## MISSING SKILLS
+- Docker: Not mentioned in resume
+- MLflow: Not mentioned
 
-## Project Structure
+## CV IMPROVEMENTS FOR THIS ROLE
+1. Add a line in RepoGuardian project about model deployment
+2. Mention any experience containerizing Python apps, even locally
+3. Highlight the 60% efficiency improvement metric more prominently
 
-```
-career-ops/
-├── CLAUDE.md                    # Agent instructions
-├── cv.md                        # Your CV (create this)
-├── article-digest.md            # Your proof points (optional)
-├── config/
-│   └── profile.example.yml      # Template for your profile
-├── modes/                       # 14 skill modes
-│   ├── _shared.md               # Shared context (customize this)
-│   ├── oferta.md                # Single evaluation
-│   ├── pdf.md                   # PDF generation
-│   ├── scan.md                  # Portal scanner
-│   ├── batch.md                 # Batch processing
-│   └── ...
-├── templates/
-│   ├── cv-template.html         # ATS-optimized CV template
-│   ├── portals.example.yml      # Scanner config template
-│   └── states.yml               # Canonical statuses
-├── batch/
-│   ├── batch-prompt.md          # Self-contained worker prompt
-│   └── batch-runner.sh          # Orchestrator script
-├── dashboard/                   # Go TUI pipeline viewer
-├── data/                        # Your tracking data (gitignored)
-├── reports/                     # Evaluation reports (gitignored)
-├── output/                      # Generated PDFs (gitignored)
-├── fonts/                       # Space Grotesk + DM Sans
-├── docs/                        # Setup, customization, architecture
-└── examples/                    # Sample CV, report, proof points
-```
+## INTERVIEW QUESTIONS TO PREPARE
+1. Walk us through how you built the multi-agent system in RepoGuardian
+2. What's the difference between fine-tuning and RAG? When would you use each?
 
-## Tech Stack
+## SUMMARY
+Vamshi is a strong fit for this role. His hackathon experience and existing
+AI projects put him ahead of most intern candidates. Main gap is deployment
+tooling (Docker/MLflow) which he should address in a cover letter.
+After a full scrape run, a SUMMARY-date.md is also created with a ranked table of all evaluated jobs.
 
-![Claude Code](https://img.shields.io/badge/Claude_Code-000?style=flat&logo=anthropic&logoColor=white)
-![Node.js](https://img.shields.io/badge/Node.js-339933?style=flat&logo=node.js&logoColor=white)
-![Playwright](https://img.shields.io/badge/Playwright-2EAD33?style=flat&logo=playwright&logoColor=white)
-![Go](https://img.shields.io/badge/Go-00ADD8?style=flat&logo=go&logoColor=white)
-![Bubble Tea](https://img.shields.io/badge/Bubble_Tea-FF75B5?style=flat&logo=go&logoColor=white)
+API Notes
+NVIDIA NIM (primary):
 
-- **Agent**: Claude Code with custom skills and modes
-- **PDF**: Playwright/Puppeteer + HTML template
-- **Scanner**: Playwright + Greenhouse API + WebSearch
-- **Dashboard**: Go + Bubble Tea + Lipgloss (Catppuccin Mocha theme)
-- **Data**: Markdown tables + YAML config + TSV batch files
+Free tier from build.nvidia.com
+Model: google/gemma-4-31b-it — 31 billion parameters
+Slow (1-3 minutes per evaluation) but free and good quality
+Note: Gemma-4 doesn't support the system role — all prompts go in the user message
 
-## Also Open Source
+Groq (backup):
 
-- **[cv-santiago](https://github.com/santifer/cv-santiago)** -- The portfolio website (santifer.io) with AI chatbot, LLMOps dashboard, and case studies. If you need a portfolio to showcase alongside your job search, fork it and make it yours.
+Free tier from console.groq.com
+Model: llama3-70b-8192 — 70 billion parameters
+Fast (3-8 seconds) but hits rate limits if you run many evaluations back to back
+Use --api groq to force it
 
-## About the Author
+The system auto-detects which key is set in .env and picks accordingly. To force a specific API:
+bashnode scrape-and-rank.mjs --api nvidia   # use NVIDIA
+node scrape-and-rank.mjs --api groq     # use Groq
 
-I'm Santiago -- Head of Applied AI, former founder (built and sold a business that still runs with my name on it). I built career-ops to manage my own job search. It worked: I used it to land my current role.
-
-My portfolio and other open source projects → [santifer.io](https://santifer.io)
-
-## Star History
-
-<a href="https://www.star-history.com/?repos=santifer%2Fcareer-ops&type=timeline&legend=top-left">
- <picture>
-   <source media="(prefers-color-scheme: dark)" srcset="https://api.star-history.com/chart?repos=santifer/career-ops&type=timeline&theme=dark&legend=top-left" />
-   <source media="(prefers-color-scheme: light)" srcset="https://api.star-history.com/chart?repos=santifer/career-ops&type=timeline&legend=top-left" />
-   <img alt="Star History Chart" src="https://api.star-history.com/chart?repos=santifer/career-ops&type=timeline&legend=top-left" />
- </picture>
-</a>
-
-## Disclaimer
-
-**career-ops is a local, open-source tool — NOT a hosted service.** By using this software, you acknowledge:
-
-1. **You control your data.** Your CV, contact info, and personal data stay on your machine and are sent directly to the AI provider you choose (Anthropic, OpenAI, etc.). We do not collect, store, or have access to any of your data.
-2. **You control the AI.** The default prompts instruct the AI not to auto-submit applications, but AI models can behave unpredictably. If you modify the prompts or use different models, you do so at your own risk. **Always review AI-generated content for accuracy before submitting.**
-3. **You comply with third-party ToS.** You must use this tool in accordance with the Terms of Service of the career portals you interact with (Greenhouse, Lever, Workday, LinkedIn, etc.). Do not use this tool to spam employers or overwhelm ATS systems.
-4. **No guarantees.** Evaluations are recommendations, not truth. AI models may hallucinate skills or experience. The authors are not liable for employment outcomes, rejected applications, account restrictions, or any other consequences.
-
-See [LEGAL_DISCLAIMER.md](LEGAL_DISCLAIMER.md) for full details. This software is provided under the [MIT License](LICENSE) "as is", without warranty of any kind.
-
-## Contributors
-
-<a href="https://github.com/santifer/career-ops/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=santifer/career-ops" />
-</a>
-
-Got hired using career-ops? [Share your story!](https://github.com/santifer/career-ops/issues/new?template=i-got-hired.yml)
-
-## License
-
-MIT
-
-## Let's Connect
-
-[![Website](https://img.shields.io/badge/santifer.io-000?style=for-the-badge&logo=safari&logoColor=white)](https://santifer.io)
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-0A66C2?style=for-the-badge&logo=linkedin&logoColor=white)](https://linkedin.com/in/santifer)
-[![X](https://img.shields.io/badge/X-000?style=for-the-badge&logo=x&logoColor=white)](https://x.com/santifer)
-[![Discord](https://img.shields.io/badge/Discord-5865F2?style=for-the-badge&logo=discord&logoColor=white)](https://discord.gg/8pRpHETxa4)
-[![Email](https://img.shields.io/badge/Email-EA4335?style=for-the-badge&logo=gmail&logoColor=white)](mailto:hi@santifer.io)
+Known Limitations
+Scraping reliability — Internshala and Naukri occasionally block headless browsers or change their HTML structure. If a scrape returns 0 jobs, try a different keyword or use --dry-run to see if the site is loading at all. The fallback is always to copy-paste a JD manually into nvidia-eval.mjs.
+NVIDIA speed — The 31B model is slow on the free tier. If you're evaluating 10 jobs it could take 20-30 minutes. Either use --limit 3 to test first, or switch to --api groq for faster runs.
+CV updates — The tool evaluates against whatever is in cv.md. If you update your resume, update cv.md too or the reports won't reflect your current profile.
